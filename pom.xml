@@ -7,7 +7,7 @@
     <artifactId>ikarus-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>ikarus-backend</name>
-    <description>Server backend for the Ikarus app which stores attendance data of staff for events</description>
+    <description>Server backend for the Ikarus App which stores attendance data of staff for events</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
