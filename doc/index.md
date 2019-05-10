@@ -5,7 +5,7 @@ The Ikarus Backend provides two APIs:
 * [Public API for App](app/public.md)
 * [Private API for Management](management/private.md)
 
-The public API is used by the Ikarus app to:
+The public API is used by the Ikarus App to:
 * Get the information about available events
 * Get and modify attendance data of staff in an event
 
