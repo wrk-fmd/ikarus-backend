@@ -1,10 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Ikarus Web Interface</title>
-    </head>
-    <body>
-        Willkommen bei Ikarus!
-    </body>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ikarus - Ambulanzen</title>
+    <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
+    <link rel="stylesheet" href="css/datatables.min-1.10.18.css">
+    <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap-4.3.1.min.js"></script>
+    <script src="js/datatables-1.10.18.min.js"></script>
+    <script src="js/functions.js"></script>
+    <script src="js/api-handling.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <h3 class="text-white">Ikarus&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</h3>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+            <a class="nav-link" href="index.html">Ambulanzen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="edit-event.html">Ambulanz hinzuf&uuml;gen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="import-event.html">Ambulanz importieren</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled">Ambulanz bearbeiten</a>
+        </li>
+    </ul>
+    <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
+</nav>
+<div class="container py-2">
+    <table id="table-events" class="table table-bordered table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Ambulanz</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <br/>
+    <div class="text-center">
+        <button id="refresh-events" class="btn btn-primary col-sm-3" onclick="refrehEventList();">Ambulanzliste aktualisieren</button>
+        <a class="btn btn-success col-sm-3" href="edit-event.html">Ambulanz hinzuf&uuml;gen</a>
+        <a class="btn btn-secondary col-sm-3" href="import-event.html">Ambulanz importieren</a>
+    </div>
+</div>
+<div id="delete-event" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Wirklich l&ouml;schen?</h4>
+                <button class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">Soll die Ambulanz &quot;<span id="delete-event-name"></span>&quot; wirklich gel&ouml;scht werden?</div>
+            <div class="modal-footer">
+                <button class="btn btn-danger col-sm-2" data-dismiss="modal" onclick="deleteEventConfirmed();">Ja</button>
+                <button class="btn btn-secondary col-sm-2" data-dismiss="modal">Nein</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript">
+    var dataTable = null;
+    var events = {};
+    $(document).ready(function() {
+        setCurrentEvent(null);
+        $("#refresh-events").trigger("click");
+    });
+    function refrehEventList() {
+        if (dataTable != null){
+            dataTable.destroy();
+        }
+        $("#table-events").find("tbody").html("");
+        $("#table-events").find("tbody").append("<tr><td class='loading-events' colspan='2'><div class='text-center'><div class='spinner-border spinner-border-sm' role='status'><span class='sr-only'>Lade...</span></div></div></td></tr>");
+        getEvents(function(result) {
+            if (result["events"] != null) {
+                events = result["events"];
+            } else {
+                events = {};
+            }
+            $("#table-events").find("tbody").html("");
+            $.each(events, function(index, value) {
+                $("#table-events").find("tbody").append("<tr id='event-" + value["id"] + "'><td class='align-middle'>" + (value["externalId"] != null && value["externalId"].length > 0 ? value["externalId"] + " - " : "") + value["name"] + "</td>" +
+                    "<td class='align-middle'><a href='edit-event.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                    "<button class='btn btn-danger btn-sm' data-toggle='modal' data-target='#delete-event' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button></td></tr>");
+            });
+            createDataTable();
+        }, function() {
+            $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzliste konnte nicht abgerufen werden!</div>");
+            $("#error-alert").fadeTo(5000, 0.0, function() {
+                $("#error-alert").remove();
+            });
+        });
+    }
+    function createDataTable() {
+        dataTable = $("#table-events").DataTable({
+            columns: [
+                { name: "event", orderable: true },
+                { name: "action", orderable: false }
+            ],
+            order: [[0, "asc"]],
+            language: {
+                "decimal": "",
+                "emptyTable": "Es wurden keine Ambulanzen gefunden",
+                "info": "Zeige Ambulanz _START_ bis _END_ von insgesamt _TOTAL_ Ambulanzen",
+                "infoEmpty": "Zeige Ambulanz 0 bis 0 von insgesamt 0 Ambulanzen",
+                "infoFiltered": "(gefiltert aus _MAX_ Ambulanzen)",
+                "infoPostFix": "",
+                "thousands": "",
+                "lengthMenu": "Zeige _MENU_ Ambulanzen",
+                "loadingRecords": "Lade...",
+                "processing": "Verarbeite...",
+                "search": "Ambulanz suchen:",
+                "zeroRecords": "Keine Ambulanzen mit den Suchbegriffen gefunden",
+                "paginate": {
+                    "first": "Erste",
+                    "last": "Letzte",
+                    "next": "N&aumlchste",
+                    "previous": "Vorherige"
+                },
+                "aria": {
+                    "sortAscending": ": aktivieren um die Spalte aufsteigend zu ordnen",
+                    "sortDescending": ": aktivieren um die Spalte absteigend zu ordnen"
+                }
+            }
+        });
+    }
+    function setDeleteInfo(eventId) {
+        setCurrentEvent(eventId);
+        $.each(events, function(index, value) {
+            if (value["id"] == eventId) {
+                $("#delete-event-name").html(value["name"]);
+                return false;
+            }
+        });
+    }
+    function deleteEventConfirmed() {
+        deleteEvent(getCurrentEvent(), function() {
+            if (dataTable != null){
+                dataTable.destroy();
+            }
+            $("#event-" + getCurrentEvent()).remove();
+            createDataTable();
+        }, function() {
+            $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanz konnte nicht gel&ouml;scht werden!</div>");
+            $("#error-alert").fadeTo(5000, 0.0, function() {
+                $("#error-alert").remove();
+            });
+        });
+    }
+</script>
 </html>

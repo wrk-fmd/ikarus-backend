@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ikarus - Ambulanz hinzuf&uuml;gen</title>
+    <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
+    <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap-4.3.1.min.js"></script>
+    <script src="js/functions.js"></script>
+    <script src="js/api-handling.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <h3 class="text-white">Ikarus&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</h3>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="index.html">Ambulanzen</a>
+        </li>
+        <li id="add-event" class="nav-item active">
+            <a class="nav-link" href="edit-event.html">Ambulanz hinzuf&uuml;gen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="import-event.html">Ambulanz importieren</a>
+        </li>
+        <li id="edit-event" class="nav-item">
+            <a class="nav-link disabled">Ambulanz bearbeiten</a>
+        </li>
+    </ul>
+    <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
+</nav>
+<div class="container py-2">
+    <form id="form-edit-event" class="was-validated">
+        <div class="form-group">
+            <label for="event-id">ID:&nbsp;</label>
+            <input type="number" id="event-id" class="form-control" name="id" value="-1" readonly>
+        </div>
+        <div class="form-group">
+            <label for="event-external-id">Externe ID:&nbsp;</label>
+            <input type="text" class="form-control" id="event-external-id" name="externalId" placeholder="Externe ID (z.B. Ambulanznummer)">
+        </div>
+        <div class="form-group">
+            <label for="event-name">Ambulanzname:&nbsp;</label>
+            <input type="text" maxlength="255" class="form-control" id="event-name" name="name" placeholder="Name der Ambulanz" required>
+            <div class="valid-feedback">OK</div>
+            <div class="invalid-feedback">Bitte gib einen Namen f&uuml;r die Ambulanz ein</div>
+        </div>
+        <div class="form-group">
+            <label for="event-description">Beschreibung:&nbsp;</label>
+            <textarea class="form-control" id="event-description" name="description" placeholder="Beschreibung der Ambulanz" rows="5"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="event-location">Ort:&nbsp;</label>
+            <input type="text" class="form-control" id="event-location" name="location" placeholder="Ort der Ambulanz">
+        </div>
+        <div class="form-group">
+            <label for="event-start">Startzeit:&nbsp;</label>
+            <input type="datetime-local" class="form-control" id="event-start" name="start" placeholder="Startzeit der Ambulanz">
+        </div>
+        <div class="form-group">
+            <label for="event-end">Endzeit:&nbsp;</label>
+            <input type="datetime-local" class="form-control" id="event-end" name="end" placeholder="Endzeit der Ambulanz">
+        </div>
+        <button type="submit" id="edit-event-submit" class="btn btn-primary">Ambulanz hinzuf&uuml;gen</button>
+    </form>
+</div>
+</body>
+<script type="text/javascript">
+    $(document).ready(function() {
+        if (getCurrentEvent() > 0) {
+            getEventInfo(getCurrentEvent(), fillForm, function() {
+                $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzdaten konnten nicht abgerufen werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        }
+        $("#form-edit-event").on("submit", function(event) {
+            event.preventDefault();
+            updateEvent(convertFormToJSON($("#form-edit-event").serializeArray()), function(result) {
+                setCurrentEvent(result["id"]);
+                fillForm(result);
+                $(".container").append("<br/><div id='success-alert' class='alert alert-success alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die &Auml;nderungen wurden erfolgreich gespeichert!</div>");
+                $("#success-alert").fadeTo(2500, 0.0, function() {
+                    $("#success-alert").remove();
+                });
+            }, function() {
+                $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanz konnte nicht gespeichert werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        });
+    });
+    function setEditMode() {
+        document.title = "Ikarus - Ambulanz bearbeiten";
+        $("#event-id").val(getCurrentEvent());
+        $("#edit-event-submit").attr("disabled", "disabled").html("<div class='spinner-grow spinner-grow-sm' role='status'></div><span>&nbsp;&nbsp;&nbsp;Lade Ambulanzdaten...</span>");
+        $("#add-event").removeClass("active");
+        $("#edit-event").addClass("active").find("a").removeClass("disabled");
+        setCurrentEvent(null);
+    }
+    function fillForm(eventData) {
+        setEditMode();
+        $("#event-external-id").val(eventData["externalId"]);
+        $("#event-name").val(eventData["name"]);
+        $("#event-description").val(eventData["description"] ? eventData["description"] : "");
+        $("#event-location").val(eventData["location"] ? eventData["location"] : "");
+        $("#event-start").val(eventData["start"] ? eventData["start"].substr(0, eventData["start"].length - 5) : "");
+        $("#event-end").val(eventData["end"] ? eventData["end"].substr(0, eventData["end"].length - 5) : "");
+        $("#edit-event-submit").removeAttr("disabled").html("&Auml;nderungen speichern");
+    }
+</script>
+</html>
