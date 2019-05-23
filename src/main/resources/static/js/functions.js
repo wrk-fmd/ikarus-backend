@@ -28,3 +28,23 @@ function convertFormToJSON(formData) {
     });
     return JSON.stringify(json);
 }
+
+function getStatusString(status) {
+    switch (status) {
+        case "NOT_REGISTERED": return "Nicht registriert";
+        case "REGISTERED": return "Registriert";
+        case "REGISTERED_WITH_MATERIAL": return "Registriert - Material ausgefasst";
+        case "DEREGISTERED": return "Abgemeldet";
+        default: return status;
+    }
+}
+
+function getStatusColor(status) {
+    switch (status) {
+        case "NOT_REGISTERED": return "danger";
+        case "REGISTERED": return "success";
+        case "REGISTERED_WITH_MATERIAL": return "info";
+        case "DEREGISTERED": return "primary";
+        default: return status;
+    }
+}
