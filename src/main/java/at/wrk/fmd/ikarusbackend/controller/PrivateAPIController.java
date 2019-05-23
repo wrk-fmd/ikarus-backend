@@ -12,7 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
@@ -28,8 +35,12 @@ import java.time.ZonedDateTime;
 @RequestMapping("/api/v1/private")
 public class PrivateAPIController {
 
+    private final EventService eventService;
+
     @Autowired
-    private EventService eventService;
+    public PrivateAPIController(final EventService eventService) {
+        this.eventService = eventService;
+    }
 
     @PostMapping(value = "/event", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Event> saveEvent(@Valid @RequestBody Event event) {
@@ -67,7 +78,7 @@ public class PrivateAPIController {
         Event event = new Event();
         try {
             calendar = calendarBuilder.build(eventFile.getInputStream());
-            component = (Component)calendar.getComponents().get(0);
+            component = (Component) calendar.getComponents().get(0);
             currentProperty = component.getProperty("DESCRIPTION");
             if (currentProperty == null) {
                 event.setDescription("");
@@ -84,7 +95,10 @@ public class PrivateAPIController {
         } catch (ParserException e) {
             String eventFileContent = new String(eventFile.getBytes());
             int eventIdStart = eventFileContent.indexOf("&AmbulanceNr=");
-            event.setExternalId(URLDecoder.decode(eventFileContent.substring(eventIdStart + 13, eventFileContent.indexOf("&", eventIdStart + 13)), StandardCharsets.UTF_8.toString()));
+            event.setExternalId(
+                    URLDecoder.decode(
+                            eventFileContent.substring(eventIdStart + 13, eventFileContent.indexOf("&", eventIdStart + 13)),
+                            StandardCharsets.UTF_8.toString()));
             int descriptionStart = eventFileContent.indexOf("DESCRIPTION:");
             if (descriptionStart > 0) {
                 descriptionStart = eventFileContent.indexOf("\n", descriptionStart + 12) + 1;
@@ -107,7 +121,7 @@ public class PrivateAPIController {
             }
             eventFileContent += "\nEND:VEVENT\nEND:VCALENDAR";
             calendar = calendarBuilder.build(new ByteArrayInputStream(eventFileContent.getBytes()));
-            component = (Component)calendar.getComponents().get(0);
+            component = (Component) calendar.getComponents().get(0);
             currentProperty = component.getProperty("DESCRIPTION");
             event.setDescription(currentProperty == null ? "" : currentProperty.getValue());
         }

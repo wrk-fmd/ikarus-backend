@@ -11,7 +11,7 @@ import java.util.List;
 @Setter
 public class JSONEventList {
 
-    private List<Event> events;
+    private final List<Event> events;
 
     public JSONEventList(List<Event> events) {
         if (events == null) {

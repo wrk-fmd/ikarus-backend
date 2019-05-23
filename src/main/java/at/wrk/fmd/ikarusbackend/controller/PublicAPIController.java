@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/public")
 public class PublicAPIController {
 
+    private final EventService eventService;
+
     @Autowired
-    private EventService eventService;
+    public PublicAPIController(final EventService eventService) {
+        this.eventService = eventService;
+    }
 
     @GetMapping(value = "/events", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JSONEventList> getEvents() {

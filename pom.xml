@@ -8,6 +8,7 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>ikarus-backend</name>
     <description>Server backend for the Ikarus App which stores attendance data of staff for events</description>
+    <packaging>war</packaging>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -79,6 +80,7 @@
     </dependencies>
 
     <build>
+        <finalName>ikarus</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
