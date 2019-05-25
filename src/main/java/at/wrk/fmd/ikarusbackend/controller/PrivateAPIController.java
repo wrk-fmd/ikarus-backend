@@ -204,11 +204,12 @@ public class PrivateAPIController {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(staffFile.getInputStream()))) {
                 while ((line = reader.readLine()) != null) {
                     lineIndex = line.indexOf("\"");
-                    if (lineIndex >= 0) {
-                        lastLineIndex = line.lastIndexOf("\"");
+                    while(lineIndex >= 0) {
+                        lastLineIndex = line.indexOf("\"", lineIndex + 1);
                         if (lastLineIndex > lineIndex) {
                             line = line.substring(0, lineIndex) + line.substring(lineIndex + 1, lastLineIndex).replaceAll(";", ",") + line.substring(lastLineIndex + 1);
                         }
+                        lineIndex = line.indexOf("\"");
                     }
                     values = line.split(";");
                     if (firstLine) {

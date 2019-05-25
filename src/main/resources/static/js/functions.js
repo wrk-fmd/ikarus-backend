@@ -21,6 +21,21 @@ function setCurrentEvent(currentEvent) {
     }
 }
 
+function getCurrentStaff() {
+    if (!sessionStorage.getItem("currentStaff")) {
+        return -1;
+    }
+    return sessionStorage.getItem("currentStaff")
+}
+
+function setCurrentStaff(currentStaff) {
+    if (currentStaff == null) {
+        sessionStorage.removeItem("currentStaff");
+    } else {
+        sessionStorage.setItem("currentStaff", currentStaff);
+    }
+}
+
 function convertFormToJSON(formData) {
     var json = {};
     jQuery.each(formData, function(index, value) {

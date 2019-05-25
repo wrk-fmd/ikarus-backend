@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Ikarus - Ambulanzen</title>
     <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
-    <link rel="stylesheet" href="css/datatables.min-1.10.18.css">
     <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
+    <link rel="stylesheet" href="css/datatables-1.10.18.min.css">
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/bootstrap-4.3.1.min.js"></script>
     <script src="js/datatables-1.10.18.min.js"></script>
@@ -20,13 +20,16 @@
             <a class="nav-link" href="index.html">Ambulanzen</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="edit-event.html">Ambulanz hinzuf&uuml;gen</a>
+            <a class="nav-link" href="edit-event.html" onclick="setCurrentEvent(null);">Ambulanz hinzuf&uuml;gen</a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="import-event.html">Ambulanz importieren</a>
         </li>
         <li class="nav-item">
             <a class="nav-link disabled">Ambulanz bearbeiten</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled">Mitarbeiterstatus</a>
         </li>
     </ul>
     <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
@@ -36,6 +39,8 @@
         <thead>
             <tr>
                 <th>Ambulanz</th>
+                <th>Startzeit</th>
+                <th>Endzeit</th>
                 <th>Aktion</th>
             </tr>
         </thead>
@@ -65,20 +70,20 @@
 </div>
 </body>
 <script type="text/javascript">
-    var dataTable = null;
+    var eventTable = null;
     var events = {};
     $(document).ready(function() {
         setCurrentEvent(null);
         $("#refresh-events").trigger("click");
     });
     function refrehEventList() {
-        if (dataTable != null){
-            dataTable.destroy();
+        if (eventTable != null){
+            eventTable.destroy();
         }
         $("#table-events").find("tbody").html("");
-        $("#table-events").find("tbody").append("<tr><td class='loading-events' colspan='2'><div class='text-center'><div class='spinner-border spinner-border-sm' role='status'><span class='sr-only'>Lade...</span></div></div></td></tr>");
+        $("#table-events").find("tbody").append("<tr><td colspan='4'><div class='text-center'><div class='spinner-border spinner-border-sm' role='status'><span class='sr-only'>Lade...</span></div></div></td></tr>");
         getEvents(function(result) {
-            if (result["events"] != null) {
+            if (result["events"] != null && result["events"].length > 0) {
                 events = result["events"];
             } else {
                 events = {};
@@ -86,22 +91,26 @@
             $("#table-events").find("tbody").html("");
             $.each(events, function(index, value) {
                 $("#table-events").find("tbody").append("<tr id='event-" + value["id"] + "'><td class='align-middle'>" + (value["externalId"] != null && value["externalId"].length > 0 ? value["externalId"] + " - " : "") + value["name"] + "</td>" +
+                    "<td class='align-middle'>" + (value["start"] == null ? "" : new Date(value["start"]).toLocaleString([], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })) + "</td>" +
+                    "<td class='align-middle'>" + (value["end"] == null ? "" : new Date(value["end"]).toLocaleString([], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })) + "</td>" +
                     "<td class='align-middle'><a href='edit-event.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
                     "<button class='btn btn-danger btn-sm' data-toggle='modal' data-target='#delete-event' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button></td></tr>");
             });
-            createDataTable();
+            createEventTable();
         }, function() {
-            $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzliste konnte nicht abgerufen werden!</div>");
+            $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzliste konnte nicht abgerufen werden!</div>");
             $("#error-alert").fadeTo(5000, 0.0, function() {
                 $("#error-alert").remove();
             });
         });
     }
-    function createDataTable() {
-        dataTable = $("#table-events").DataTable({
+    function createEventTable() {
+        eventTable = $("#table-events").DataTable({
             columns: [
-                { name: "event", orderable: true },
-                { name: "action", orderable: false }
+                { name: "event", orderable: true, searchable: true },
+                { name: "start", orderable: true, searchable: false },
+                { name: "end", orderable: true, searchable: false },
+                { name: "action", orderable: false, searchable: false }
             ],
             order: [[0, "asc"]],
             language: {
@@ -141,13 +150,14 @@
     }
     function deleteEventConfirmed() {
         deleteEvent(getCurrentEvent(), function() {
-            if (dataTable != null){
-                dataTable.destroy();
+            if (eventTable != null){
+                eventTable.destroy();
             }
             $("#event-" + getCurrentEvent()).remove();
-            createDataTable();
+            createEventTable();
+            setCurrentEvent(null);
         }, function() {
-            $(".container").append("<br/><div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanz konnte nicht gel&ouml;scht werden!</div>");
+            $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanz konnte nicht gel&ouml;scht werden!</div>");
             $("#error-alert").fadeTo(5000, 0.0, function() {
                 $("#error-alert").remove();
             });
