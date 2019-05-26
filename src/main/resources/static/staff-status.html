@@ -38,6 +38,8 @@
     <h1 id="event-name"></h1>
     <div id="filter-buttons">
         <h3>Abschnitte filtern</h3>
+        <button id="show-all-sections" class="btn btn-primary" onclick="filterStatusList(null);">Alle Abschnitte anzeigen</button>
+        <span id="section-filter"></span>
     </div>
     <br/>
     <div>
@@ -66,6 +68,7 @@
 </body>
 <script type="text/javascript">
     var statusTable = null;
+    var sections = [];
     $(document).ready(function() {
         if (getCurrentEvent() > 0) {
             getEventInfo(getCurrentEvent(), function (result) {
@@ -130,14 +133,30 @@
         }
         $("#table-status").find("tbody").html("");
         if (staffData["staff"] != null && staffData["staff"].length > 0) {
+            var lastSection = "";
+            sections = [];
             $.each(staffData["staff"], function (index, value) {
+                if (value["section"] != null && value["section"] != "" && value["section"] != lastSection) {
+                    var sectionUsed = false;
+                    $.each(sections, function(index, section) {
+                        if (value["section"] == section) {
+                            sectionUsed = true;
+                            return false;
+                        }
+                    });
+                    if (!sectionUsed) {
+                        $("#section-filter").append("<button id='section-" + sections.length + "' class='btn btn-secondary' onclick='filterStatusList(" + sections.length + ");'>" + value["section"] + "</button>&nbsp;");
+                        lastSection = value["section"];
+                        sections.push(lastSection);
+                    }
+                }
                 $("#table-status").find("tbody").append("<tr id='status-" + value["id"] + "'><td id='status-" + value["id"] + "-name' class='align-middle'>" + value["name"] + "</td>" +
                     "<td id='status-" + value["id"] + "-status' class='align-middle'>" + getStatusString(value["status"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-external-id' class='align-middle'>" + (value["externalId"] == null ? "" : value["externalId"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-section' class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-comment' class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
                     "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
-                    "<div id='status-" + value["id"] + "-div'></div></td></tr>");
+                    "<span id='status-" + value["id"] + "-div'></span></td></tr>");
                 addStatusChangeButtons(value);
             });
         }
@@ -176,6 +195,54 @@
                 }
             }
         });
+    }
+    function filterStatusList(section) {
+        var i;
+        if (section == null) {
+            if ($("#show-all-sections").hasClass("btn-secondary")) {
+                $("#show-all-sections").removeClass("btn-secondary").addClass("btn-primary");
+                for (i = 0; i < sections.length; i++) {
+                    $("#section-" + i).removeClass("btn-primary").addClass("btn-secondary");
+                }
+            } else {
+                $("#show-all-sections").removeClass("btn-primary").addClass("btn-secondary");
+                for (i = 0; i < sections.length; i++) {
+                    $("#section-" + i).removeClass("btn-secondary").addClass("btn-primary");
+                }
+            }
+            $.fn.dataTable.ext.search.pop();
+        } else {
+            $("#show-all-sections").removeClass("btn-primary").addClass("btn-secondary");
+            if ($("#section-" + section).hasClass("btn-secondary")) {
+                $("#section-" + section).removeClass("btn-secondary").addClass("btn-primary");
+            } else {
+                $("#section-" + section).removeClass("btn-primary").addClass("btn-secondary");
+            }
+            var activeFilters = [];
+            for (i = 0; i < sections.length; i++) {
+                if ($("#section-" + i).hasClass("btn-primary")) {
+                    activeFilters.push(sections[i]);
+                }
+            }
+            if (activeFilters.length == 0) {
+                filterStatusList(null);
+                return;
+            }
+            $.fn.dataTable.ext.search.pop();
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var found = false;
+                    $.each(activeFilters, function(index, filter) {
+                        if (filter == data[3]) {
+                            found = true;
+                            return false;
+                        }
+                    });
+                    return found;
+                }
+            );
+        }
+        statusTable.draw();
     }
 </script>
 </html>
