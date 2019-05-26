@@ -5,7 +5,7 @@
 
     <groupId>at.wrk.fmd</groupId>
     <artifactId>ikarus-backend</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>ikarus-backend</name>
     <description>Server backend for the Ikarus App which stores attendance data of staff for events</description>
     <packaging>war</packaging>
