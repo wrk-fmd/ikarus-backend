@@ -1,17 +1,17 @@
 package at.wrk.fmd.ikarusbackend.dto;
 
 import at.wrk.fmd.ikarusbackend.model.Staff;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class JSONStatus {
 
-    private final Staff.StaffStatus status;
-
-    public JSONStatus(Staff.StaffStatus status) {
-        this.status = status;
-    }
+    private Staff.StaffStatus status;
 
 }

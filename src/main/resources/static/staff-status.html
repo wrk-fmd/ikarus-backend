@@ -2,13 +2,13 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Ikarus - Ambulanz hinzuf&uuml;gen</title>
+    <title>Ikarus - Mirtarbeiterstatus</title>
     <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
     <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
-    <link rel="stylesheet" href="css/datatables-1.10.18.min.css">
+    <link rel="stylesheet" href="css/datatables-1.10.19.min.css">
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/bootstrap-4.3.1.min.js"></script>
-    <script src="js/datatables-1.10.18.min.js"></script>
+    <script src="js/datatables-1.10.19.min.js"></script>
     <script src="js/functions.js"></script>
     <script src="js/api-handling.js"></script>
 </head>
@@ -35,7 +35,147 @@
     <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
 </nav>
 <div class="container py-2">
-
+    <h1 id="event-name"></h1>
+    <div id="filter-buttons">
+        <h3>Abschnitte filtern</h3>
+    </div>
+    <br/>
+    <div>
+        <h4>Mitarbeiterstatus</h4>
+        <table id="table-status" class="table table-bordered table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Externe ID</th>
+                <th>Abschnitt</th>
+                <th>Kommentar</th>
+                <th>Aktion</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <br/>
+    <div class="text-center">
+        <button id="refresh-status" class="btn btn-primary col-sm-3" onclick="refreshStatusList();">Status-Liste aktualisieren</button>
+        <a class="btn btn-success col-sm-3" href="edit-event.html">Zur&uuml;ck zur Ambulanz</a>
+        <a class="btn btn-secondary col-sm-3" href="index.html">Zur&uuml;ck zur Ambulanzliste</a>
+    </div>
 </div>
 </body>
+<script type="text/javascript">
+    var statusTable = null;
+    $(document).ready(function() {
+        if (getCurrentEvent() > 0) {
+            getEventInfo(getCurrentEvent(), function (result) {
+                $("#event-name").html((result["externalId"] != null && result["externalId"].length > 0 ? result["externalId"] + " - " : "") + result["name"]);
+            }, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzdaten konnten nicht abgerufen werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        }
+        refreshStatusList();
+    });
+    function refreshStatusList() {
+        if (getCurrentEvent() > 0) {
+            $("#table-status").find("tbody").html("");
+            $("#table-status").find("tbody").append("<tr><td colspan='6'><div class='text-center'><div class='spinner-border spinner-border-sm' role='status'><span class='sr-only'>Lade...</span></div></div></td></tr>");
+            getStaff(getCurrentEvent(), createStatusTable, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Mitarbeiterdaten konnten nicht abgerufen werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        }
+    }
+    function addStatusChangeButtons(staffData) {
+        $("#status-" + staffData["id"]).addClass("table-" + getStatusColor(staffData["status"]));
+        switch(staffData["status"]) {
+            case "NOT_REGISTERED":
+                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("REGISTERED") + " btn-sm' title='Registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED\")'><i class='fas fa-sign-in-alt fa-fw'></i></button>" +
+                    "&nbsp;<button class='btn btn-" + getStatusColor("REGISTERED_WITH_MATERIAL") + " btn-sm' title='Mit Materialausgabe registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED_WITH_MATERIAL\")'><i class='fas fa-box fa-fw'></i></button>");
+                break;
+            case "REGISTERED":
+            case "REGISTERED_WITH_MATERIAL":
+                $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("NOT_REGISTERED"));
+                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("DEREGISTERED") + " btn-sm' title='Abmelden' onclick='changeStaffStatus(" + staffData["id"] + ", \"DEREGISTERED\")'><i class='fas fa-sign-out-alt fa-fw'></i></button>");
+                break;
+            default:
+                $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("REGISTERED"), "table-" + getStatusColor("REGISTERED_WITH_MATERIAL"));
+                $("#status-" + staffData["id"] + "-div").html("");
+                break;
+        }
+    }
+    function changeStaffStatus(staffId, status) {
+        setStatus(staffId, status, function(result) {
+            $("#status-" + result["id"] + "-name").html(result["name"]);
+            $("#status-" + result["id"] + "-status").html(getStatusString(result["status"]));
+            $("#status-" + result["id"] + "-external-id").html(result["externalId"] == null ? "" : result["externalId"]);
+            $("#status-" + result["id"] + "-section").html(result["section"] == null ? "" : result["section"]);
+            $("#status-" + result["id"] + "-comment").html(result["comment"] == null ? "" : result["comment"]);
+            addStatusChangeButtons(result);
+        }, function() {
+            $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Der Mitarbeiterstatus konnte nicht ge&auml;ndert werden!</div>");
+            $("#error-alert").fadeTo(5000, 0.0, function() {
+                $("#error-alert").remove();
+            });
+        });
+    }
+    function createStatusTable(staffData) {
+        if (statusTable != null) {
+            statusTable.destroy();
+        }
+        $("#table-status").find("tbody").html("");
+        if (staffData["staff"] != null && staffData["staff"].length > 0) {
+            $.each(staffData["staff"], function (index, value) {
+                $("#table-status").find("tbody").append("<tr id='status-" + value["id"] + "'><td id='status-" + value["id"] + "-name' class='align-middle'>" + value["name"] + "</td>" +
+                    "<td id='status-" + value["id"] + "-status' class='align-middle'>" + getStatusString(value["status"]) + "</td>" +
+                    "<td id='status-" + value["id"] + "-external-id' class='align-middle'>" + (value["externalId"] == null ? "" : value["externalId"]) + "</td>" +
+                    "<td id='status-" + value["id"] + "-section' class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
+                    "<td id='status-" + value["id"] + "-comment' class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
+                    "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                    "<div id='status-" + value["id"] + "-div'></div></td></tr>");
+                addStatusChangeButtons(value);
+            });
+        }
+        statusTable = $("#table-status").DataTable({
+            columns: [
+                { name: "name", orderable: true, searchable: true },
+                { name: "status", orderable: true, searchable: false },
+                { name: "externalId", orderable: true, searchable: true },
+                { name: "section", orderable: true, searchable: true },
+                { name: "comment", orderable: false, searchable: false },
+                { name: "action", orderable: false, searchable: false }
+            ],
+            order: [[0, "asc"]],
+            language: {
+                "decimal": "",
+                "emptyTable": "Es wurden keine Mitarbeiter zu der Ambulanz gefunden",
+                "info": "Zeige Mitarbeiter _START_ bis _END_ von insgesamt _TOTAL_ Mitarbeitern der ausgew&auml;hlten Ambulanz",
+                "infoEmpty": "Zeige Mitarbeiter 0 bis 0 von insgesamt 0 Mitarbeitern der ausgew&auml;hlten Ambulanz",
+                "infoFiltered": "(gefiltert aus _MAX_ Mitarbeitern)",
+                "infoPostFix": "",
+                "thousands": "",
+                "lengthMenu": "Zeige _MENU_ Mitarbeiter",
+                "loadingRecords": "Lade...",
+                "processing": "Verarbeite...",
+                "search": "Mitarbeiter suchen (Name, externe ID oder Abschnitt):",
+                "zeroRecords": "Kein Mitarbeiter mit den Suchbegriffen gefunden",
+                "paginate": {
+                    "first": "Erste",
+                    "last": "Letzte",
+                    "next": "N&aumlchste",
+                    "previous": "Vorherige"
+                },
+                "aria": {
+                    "sortAscending": ": aktivieren um die Spalte aufsteigend zu ordnen",
+                    "sortDescending": ": aktivieren um die Spalte absteigend zu ordnen"
+                }
+            }
+        });
+    }
+</script>
 </html>

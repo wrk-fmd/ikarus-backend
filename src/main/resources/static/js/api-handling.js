@@ -107,7 +107,7 @@ function setStatus(staffId, staffStatus, successCallback, errorCallback) {
         type: "POST",
         url: apiBaseUrl + "/public/staff/status/" + staffId,
         contentType: "application/json",
-        data: { status: staffStatus },
+        data: JSON.stringify({ status: staffStatus }),
         success: successCallback,
         error: errorCallback
     });

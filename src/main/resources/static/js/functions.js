@@ -58,8 +58,8 @@ function getStatusColor(status) {
     switch (status) {
         case "NOT_REGISTERED": return "danger";
         case "REGISTERED": return "success";
-        case "REGISTERED_WITH_MATERIAL": return "info";
-        case "DEREGISTERED": return "primary";
+        case "REGISTERED_WITH_MATERIAL": return "primary";
+        case "DEREGISTERED": return "secondary";
         default: return status;
     }
 }
