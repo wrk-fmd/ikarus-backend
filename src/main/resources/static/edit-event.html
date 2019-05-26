@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ikarus - Ambulanz hinzuf&uuml;gen</title>
+    <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
+    <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
+    <link rel="stylesheet" href="css/datatables-1.10.19.min.css">
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap-4.3.1.min.js"></script>
+    <script src="js/datatables-1.10.19.min.js"></script>
+    <script src="js/functions.js"></script>
+    <script src="js/api-handling.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <h3 class="text-white">Ikarus&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</h3>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="index.html">Ambulanzen</a>
+        </li>
+        <li id="add-event" class="nav-item active">
+            <a class="nav-link" href="edit-event.html" onclick="setCurrentEvent(null);">Ambulanz hinzuf&uuml;gen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="import-event.html">Ambulanz importieren</a>
+        </li>
+        <li id="edit-event" class="nav-item">
+            <a class="nav-link disabled">Ambulanz bearbeiten</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled">Mitarbeiterstatus</a>
+        </li>
+    </ul>
+    <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
+</nav>
+<div class="container py-2">
+    <form id="form-edit-event" class="was-validated">
+        <div class="form-group">
+            <label for="event-id">ID:&nbsp;</label>
+            <input type="number" id="event-id" class="form-control" name="id" value="-1" readonly>
+        </div>
+        <div class="form-group">
+            <label for="event-external-id">Externe ID:&nbsp;</label>
+            <input type="text" class="form-control" id="event-external-id" name="externalId" placeholder="Externe ID (z.B. Ambulanznummer)">
+        </div>
+        <div class="form-group">
+            <label for="event-name">Ambulanzname:&nbsp;</label>
+            <input type="text" maxlength="255" class="form-control" id="event-name" name="name" placeholder="Name der Ambulanz" required>
+            <div class="valid-feedback">OK</div>
+            <div class="invalid-feedback">Bitte gib einen Namen f&uuml;r die Ambulanz ein</div>
+        </div>
+        <div class="form-group">
+            <label for="event-description">Beschreibung:&nbsp;</label>
+            <textarea class="form-control" id="event-description" name="description" placeholder="Beschreibung der Ambulanz" rows="5"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="event-location">Ort:&nbsp;</label>
+            <input type="text" class="form-control" id="event-location" name="location" placeholder="Ort der Ambulanz">
+        </div>
+        <div class="form-group">
+            <label for="event-start">Startzeit:&nbsp;</label>
+            <input type="datetime-local" class="form-control" id="event-start" name="start" placeholder="Startzeit der Ambulanz">
+        </div>
+        <div class="form-group">
+            <label for="event-end">Endzeit:&nbsp;</label>
+            <input type="datetime-local" class="form-control" id="event-end" name="end" placeholder="Endzeit der Ambulanz">
+        </div>
+        <div class="text-center">
+            <button type="submit" id="edit-event-submit" class="btn btn-primary col-sm-3">Ambulanz hinzuf&uuml;gen</button>
+            <a class="btn btn-success col-sm-3" href="staff-status.html">Mitarbeiterstatus verwalten</a>
+            <a class="btn btn-secondary col-sm-3" href="index.html">Zur&uuml;ck zur Ambulanzliste</a>
+        </div>
+    </form>
+    <br/>
+    <div id="staff-data" class="invisible">
+        <h4>Mitarbeiter</h4>
+        <table id="table-staff" class="table table-bordered table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Externe ID</th>
+                <th>Abschnitt</th>
+                <th>Kommentar</th>
+                <th>Aktion</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <br/>
+        <div class="text-center">
+            <button id="refresh-staff" class="btn btn-primary col-sm-3" onclick="refreshStaffList();">Mitarbeiterliste aktualisieren</button>
+            <a class="btn btn-success col-sm-3" href="edit-staff.html">Mitarbeiter hinzuf&uuml;gen</a>
+            <a class="btn btn-secondary col-sm-3" href="import-staff.html">Mitarbeiter importieren</a>
+        </div>
+        <div id="delete-staff" class="modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Wirklich l&ouml;schen?</h4>
+                        <button class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">Soll der Mitarbeiter &quot;<span id="delete-staff-name"></span>&quot; wirklich gel&ouml;scht werden?</div>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger col-sm-2" data-dismiss="modal" onclick="deleteStaffConfirmed();">Ja</button>
+                        <button class="btn btn-secondary col-sm-2" data-dismiss="modal">Nein</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript">
+    var staff = {};
+    var staffTable = null;
+    $(document).ready(function() {
+        if (getCurrentEvent() > 0) {
+            getEventInfo(getCurrentEvent(), fillForm, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzdaten konnten nicht abgerufen werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        }
+        $("#form-edit-event").on("submit", function(event) {
+            event.preventDefault();
+            updateEvent(convertFormToJSON($("#form-edit-event").serializeArray()), function(result) {
+                setCurrentEvent(result["id"]);
+                fillForm(result);
+                $(".container").prepend("<div id='success-alert' class='alert alert-success alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die &Auml;nderungen wurden erfolgreich gespeichert!</div>");
+                $("#success-alert").fadeTo(2500, 0.0, function() {
+                    $("#success-alert").remove();
+                });
+            }, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanz konnte nicht gespeichert werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        });
+    });
+    function setEditMode() {
+        document.title = "Ikarus - Ambulanz bearbeiten";
+        $("#event-id").val(getCurrentEvent());
+        $("#edit-event-submit").attr("disabled", "disabled").html("<div class='spinner-grow spinner-grow-sm' role='status'></div><span>&nbsp;&nbsp;&nbsp;Lade Ambulanzdaten...</span>");
+        $("#add-event").removeClass("active");
+        $("#edit-event").addClass("active").find("a").removeClass("disabled");
+    }
+    function fillForm(eventData) {
+        setEditMode();
+        $("#event-external-id").val(eventData["externalId"]);
+        $("#event-name").val(eventData["name"]);
+        $("#event-description").val(eventData["description"] ? eventData["description"] : "");
+        $("#event-location").val(eventData["location"] ? eventData["location"] : "");
+        $("#event-start").val(eventData["start"] ? eventData["start"].substr(0, eventData["start"].length - 5) : "");
+        $("#event-end").val(eventData["end"] ? eventData["end"].substr(0, eventData["end"].length - 5) : "");
+        $("#edit-event-submit").removeAttr("disabled").html("&Auml;nderungen speichern");
+        $("#staff-data").removeClass("invisible");
+        refreshStaffList();
+    }
+    function refreshStaffList() {
+        $("#table-staff").find("tbody").html("");
+        $("#table-staff").find("tbody").append("<tr><td colspan='6'><div class='text-center'><div class='spinner-border spinner-border-sm' role='status'><span class='sr-only'>Lade...</span></div></div></td></tr>");
+        getStaff($("#event-id").val(), function(result) {
+            if (result["staff"] != null && result["staff"].length > 0) {
+                staff = result["staff"];
+            } else {
+                staff = {};
+            }
+            fillStaffTable(staff);
+        }, function() {
+            $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Mitarbeiter der Ambulanz konnten nicht geladen werden!</div>");
+            $("#error-alert").fadeTo(5000, 0.0, function() {
+                $("#error-alert").remove();
+            });
+        });
+    }
+    function fillStaffTable(staffData) {
+        if (staffTable != null) {
+            staffTable.destroy();
+        }
+        $("#table-staff").find("tbody").html("");
+        $.each(staffData, function(index, value) {
+            $("#table-staff").find("tbody").append("<tr id='staff-" + value["id"] + "'><td class='align-middle'>" + value["name"] + "</td>" +
+                "<td class='align-middle'>" + getStatusString(value["status"]) + "</td>" +
+                "<td class='align-middle'>" + (value["externalId"] == null ? "" : value["externalId"]) + "</td>" +
+                "<td class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
+                "<td class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
+                "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                "<button class='btn btn-danger btn-sm' data-toggle='modal' data-target='#delete-staff' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button></td></tr>");
+        });
+        createStaffTable();
+    }
+    function createStaffTable() {
+        staffTable = $("#table-staff").DataTable({
+            columns: [
+                { name: "name", orderable: true, searchable: true },
+                { name: "status", orderable: true, searchable: false },
+                { name: "externalId", orderable: true, searchable: true },
+                { name: "section", orderable: true, searchable: true },
+                { name: "comment", orderable: false, searchable: false },
+                { name: "action", orderable: false, searchable: false }
+            ],
+            order: [[0, "asc"]],
+            language: {
+                "decimal": "",
+                "emptyTable": "Es wurden keine Mitarbeiter zu der Ambulanz gefunden",
+                "info": "Zeige Mitarbeiter _START_ bis _END_ von insgesamt _TOTAL_ Mitarbeitern der ausgew&auml;hlten Ambulanz",
+                "infoEmpty": "Zeige Mitarbeiter 0 bis 0 von insgesamt 0 Mitarbeitern der ausgew&auml;hlten Ambulanz",
+                "infoFiltered": "(gefiltert aus _MAX_ Mitarbeitern)",
+                "infoPostFix": "",
+                "thousands": "",
+                "lengthMenu": "Zeige _MENU_ Mitarbeiter",
+                "loadingRecords": "Lade...",
+                "processing": "Verarbeite...",
+                "search": "Mitarbeiter suchen (Name, externe ID oder Abschnitt):",
+                "zeroRecords": "Kein Mitarbeiter mit den Suchbegriffen gefunden",
+                "paginate": {
+                    "first": "Erste",
+                    "last": "Letzte",
+                    "next": "N&aumlchste",
+                    "previous": "Vorherige"
+                },
+                "aria": {
+                    "sortAscending": ": aktivieren um die Spalte aufsteigend zu ordnen",
+                    "sortDescending": ": aktivieren um die Spalte absteigend zu ordnen"
+                }
+            }
+        });
+    }
+    function setDeleteInfo(staffId) {
+        setCurrentStaff(staffId);
+        $.each(staff, function(index, value) {
+            if (value["id"] == staffId) {
+                $("#delete-staff-name").html(value["name"]);
+                return false;
+            }
+        });
+    }
+    function deleteStaffConfirmed() {
+        deleteStaff(getCurrentStaff(), function() {
+            if (staffTable != null){
+                staffTable.destroy();
+            }
+            $("#staff-" + getCurrentStaff()).remove();
+            createStaffTable();
+            setCurrentStaff(null);
+        }, function() {
+            $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Der Mitarbeiter/die Mitarbeiterin konnte nicht gel&ouml;scht werden!</div>");
+            $("#error-alert").fadeTo(5000, 0.0, function() {
+                $("#error-alert").remove();
+            });
+        });
+    }
+</script>
+</html>

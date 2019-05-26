@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ikarus - Mitarbeiter hinzuf&uuml;gen</title>
+    <link rel="stylesheet" href="css/bootstrap-4.3.1.min.css">
+    <link rel="stylesheet" href="css/fontawesome-5.8.2.all.min.css">
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/bootstrap-4.3.1.min.js"></script>
+    <script src="js/functions.js"></script>
+    <script src="js/api-handling.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <h3 class="text-white">Ikarus&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</h3>
+    <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="index.html">Ambulanzen</a>
+        </li>
+        <li id="add-event" class="nav-item">
+            <a class="nav-link" href="edit-event.html" onclick="setCurrentEvent(null);">Ambulanz hinzuf&uuml;gen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="import-event.html">Ambulanz importieren</a>
+        </li>
+        <li class="nav-item active">
+            <a id="edit-staff" class="nav-link disabled">Ambulanz bearbeiten - Mitarbeiter hinzuf&uuml;gen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link disabled">Mitarbeiterstatus</a>
+        </li>
+    </ul>
+    <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#info" title="Info"><i class="far fa-question-circle fa-fw"></i></button>
+</nav>
+<div class="container py-2">
+    <form id="form-edit-staff" class="was-validated">
+        <div class="form-group">
+            <label for="staff-id">ID:&nbsp;</label>
+            <input type="number" id="staff-id" class="form-control" name="id" value="-1" readonly>
+        </div>
+        <div class="form-group">
+            <label for="staff-external-id">Externe ID:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-external-id" name="externalId" placeholder="Externe ID (z.B. Dienstnummer)">
+        </div>
+        <div class="form-group">
+            <label for="staff-name">Name des Mitarbeiters:&nbsp;</label>
+            <input type="text" maxlength="255" class="form-control" id="staff-name" name="name" placeholder="Name des Mitarbeiters/der Mitarbeiterin" required>
+            <div class="valid-feedback">OK</div>
+            <div class="invalid-feedback">Bitte gib einen Namen f&uuml;r den Mitarbeiter ein</div>
+        </div>
+        <div class="form-group">
+            <label for="staff-phone">Telefonnummer:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-phone" name="phone" placeholder="Telefonnummer des Mitarbeiters/der Mitarbeiterin"></input>
+        </div>
+        <div class="form-group">
+            <label for="staff-email">E-Mail-Adresse:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-email" name="phone" placeholder="E-Mail-Adresse des Mitarbeiters/der Mitarbeiterin"></input>
+        </div>
+        <div class="form-group">
+            <label for="staff-start-location">Startort:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-start-location" name="startLocation" placeholder="Startort des Mitarbeiters/der Mitarbeiterin">
+        </div>
+        <div class="form-group">
+            <label for="staff-start-time">Startzeit:&nbsp;</label>
+            <input type="datetime-local" class="form-control" id="staff-start-time" name="startTime" placeholder="Startzeit des Mitarbeiters/der Mitarbeiterin">
+        </div>
+        <div class="form-group">
+            <label for="staff-comment">Kommentar:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-comment" name="comment" placeholder="Kommentar">
+        </div>
+        <div class="form-group">
+            <label for="staff-section">Abschnitt:&nbsp;</label>
+            <input type="text" class="form-control" id="staff-section" name="section" placeholder="Abschnitt in welchem der Mitarbeiter/die Mitarbeiterin tätig ist">
+        </div>
+        <div class="form-group">
+            <label for="staff-status">Status:&nbsp;</label>
+            <select class="form-control" id="staff-status" name="status">
+                <option value="NOT_REGISTERED" selected>Nicht registriert</option>
+                <option value="REGISTERED">Registriert</option>
+                <option value="REGISTERED_WITH_MATERIAL">Registriert - Material ausgefasst</option>
+                <option value="DEREGISTERED">Abgemeldet</option>
+            </select>
+        </div>
+        <div class="text-center">
+            <button type="submit" id="edit-staff-submit" class="btn btn-primary col-sm-3">Mitarbeiter hinzuf&uuml;gen</button>
+            <a class="btn btn-success col-sm-3" href="staff-status.html" onclick="setCurrentStaff(null);">Mitarbeiterstatus verwalten</a>
+            <a class="btn btn-secondary col-sm-3" href="edit-event.html" onclick="setCurrentStaff(null);">Zur&uuml;ck zur Ambulanz</a>
+        </div>
+    </form>
+</div>
+</body>
+<script type="text/javascript">
+    $(document).ready(function() {
+        if (getCurrentStaff() > 0) {
+            getStaffInfo(getCurrentStaff(), fillForm, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Mitarbeiterdaten konnten nicht abgerufen werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        }
+        $("#form-edit-staff").on("submit", function(event) {
+            event.preventDefault();
+            updateStaff(getCurrentEvent(), convertFormToJSON($("#form-edit-staff").serializeArray()), function(result) {
+                setCurrentStaff(result["id"]);
+                fillForm(result);
+                $(".container").prepend("<div id='success-alert' class='alert alert-success alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die &Auml;nderungen wurden erfolgreich gespeichert!</div>");
+                $("#success-alert").fadeTo(2500, 0.0, function() {
+                    $("#success-alert").remove();
+                });
+            }, function() {
+                $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Mitarbeiterdaten konnten nicht gespeichert werden!</div>");
+                $("#error-alert").fadeTo(5000, 0.0, function() {
+                    $("#error-alert").remove();
+                });
+            });
+        });
+    });
+    function setEditMode() {
+        document.title = "Ikarus - Mitarbeiter bearbeiten";
+        $("#staff-id").val(getCurrentStaff());
+        $("#edit-staff-submit").attr("disabled", "disabled").html("<div class='spinner-grow spinner-grow-sm' role='status'></div><span>&nbsp;&nbsp;&nbsp;Lade Mitarbeiterdaten...</span>");
+    }
+    function fillForm(staffData) {
+        setEditMode();
+        $("#staff-external-id").val(staffData["externalId"]);
+        $("#staff-name").val(staffData["name"]);
+        $("#staff-phone").val(staffData["phone"] ? staffData["phone"] : "");
+        $("#staff-email").val(staffData["email"] ? staffData["email"] : "");
+        $("#staff-start-location").val(staffData["startLocation"] ? staffData["startLocation"] : "");
+        $("#staff-start-time").val(staffData["startTime"] ? staffData["startTime"].substr(0, staffData["startTime"].length - 5) : "");
+        $("#staff-comment").val(staffData["comment"] ? staffData["comment"] : "");
+        $("#staff-section").val(staffData["section"] ? staffData["section"] : "");
+        $("#staff-status").find("option[value='NOT_REGISTERED']").removeAttr("selected");
+        $("#staff-status").find("option[value='" + staffData["status"] + "']").attr("selected", "selected");
+        $("#edit-staff-submit").removeAttr("disabled").html("&Auml;nderungen speichern");
+    }
+</script>
+</html>
