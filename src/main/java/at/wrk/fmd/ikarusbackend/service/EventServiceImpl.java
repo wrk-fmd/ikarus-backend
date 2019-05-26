@@ -18,22 +18,22 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public void delete(Event event) {
+    public void delete(final Event event) {
         eventRepository.delete(event);
     }
 
     @Override
-    public Event findByEventId(long eventId) {
+    public Event findByEventId(final long eventId) {
         return eventRepository.findById(eventId).orElse(null);
     }
 
     @Override
-    public Event findByExternalId(String externalId) {
+    public Event findByExternalId(final String externalId) {
         return eventRepository.findByExternalId(externalId).orElse(null);
     }
 
     @Override
-    public Event save(Event event) {
+    public Event save(final Event event) {
         return eventRepository.save(event);
     }
 

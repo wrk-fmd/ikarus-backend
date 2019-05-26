@@ -11,11 +11,20 @@ import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.DateTime;
 import net.fortuna.ical4j.model.Property;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
@@ -34,22 +43,30 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/private")
 public class PrivateAPIController {
+    private static final Logger LOG = LoggerFactory.getLogger(PrivateAPIController.class);
 
     private final EventService eventService;
     private final StaffService staffService;
 
     @Autowired
-    public PrivateAPIController(final EventService eventService, StaffService staffService) {
+    public PrivateAPIController(final EventService eventService, final StaffService staffService) {
         this.eventService = eventService;
         this.staffService = staffService;
     }
 
     @PostMapping(value = "/event", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Event> saveEvent(@Valid @RequestBody Event event) {
+        ResponseEntity<Event> responseEntity;
+        Event updatedEntity = eventService.save(event);
         if (event.getId() <= 0) {
-            return new ResponseEntity<>(eventService.save(event), HttpStatus.CREATED);
+            LOG.info("Creating new event with ID {}: {}", updatedEntity.getId(), updatedEntity.getName());
+            responseEntity = new ResponseEntity<>(updatedEntity, HttpStatus.CREATED);
+        } else {
+            LOG.info("Updating existing event with ID {}: {}", updatedEntity.getId(), updatedEntity.getName());
+            responseEntity = ResponseEntity.ok(updatedEntity);
         }
-        return ResponseEntity.ok(eventService.save(event));
+
+        return responseEntity;
     }
 
     @GetMapping(value = "/event/{eventId}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -67,6 +84,8 @@ public class PrivateAPIController {
         if (event == null) {
             return new ResponseEntity<>("", HttpStatus.NOT_FOUND);
         }
+
+        LOG.info("Deleted event with ID {}: {}", event.getId(), event.getName());
         eventService.delete(event);
         return new ResponseEntity<>("", HttpStatus.NO_CONTENT);
     }
@@ -80,7 +99,7 @@ public class PrivateAPIController {
         Event event = new Event();
         try {
             calendar = calendarBuilder.build(eventFile.getInputStream());
-            component = (Component)calendar.getComponents().get(0);
+            component = (Component) calendar.getComponents().get(0);
             currentProperty = component.getProperty("DESCRIPTION");
             if (currentProperty == null) {
                 event.setDescription("");
@@ -97,7 +116,8 @@ public class PrivateAPIController {
         } catch (ParserException e) {
             String eventFileContent = new String(eventFile.getBytes());
             int eventIdStart = eventFileContent.indexOf("&AmbulanceNr=");
-            event.setExternalId(URLDecoder.decode(eventFileContent.substring(eventIdStart + 13, eventFileContent.indexOf("&", eventIdStart + 13)), StandardCharsets.UTF_8.toString()));
+            event.setExternalId(URLDecoder.decode(eventFileContent.substring(eventIdStart + 13, eventFileContent.indexOf("&", eventIdStart + 13)),
+                    StandardCharsets.UTF_8.toString()));
             int descriptionStart = eventFileContent.indexOf("DESCRIPTION:");
             if (descriptionStart > 0) {
                 descriptionStart = eventFileContent.indexOf("\n", descriptionStart + 12) + 1;
@@ -120,7 +140,7 @@ public class PrivateAPIController {
             }
             eventFileContent += "\nEND:VEVENT\nEND:VCALENDAR";
             calendar = calendarBuilder.build(new ByteArrayInputStream(eventFileContent.getBytes()));
-            component = (Component)calendar.getComponents().get(0);
+            component = (Component) calendar.getComponents().get(0);
             currentProperty = component.getProperty("DESCRIPTION");
             event.setDescription(currentProperty == null ? "" : currentProperty.getValue());
         }
@@ -135,24 +155,33 @@ public class PrivateAPIController {
             Event currentEvent = eventService.findByExternalId(event.getExternalId());
             if (currentEvent != null) {
                 event.setId(currentEvent.getId());
+                LOG.info("Updated existing event by file-import. Event ID: {}. New Name: {}", event.getId(), event.getName());
                 return ResponseEntity.ok(eventService.save(event));
             }
         }
-        return new ResponseEntity<>(eventService.save(event), HttpStatus.CREATED);
+
+        Event createdEvent = eventService.save(event);
+        LOG.info("Created new event by file-import. Event ID: {}. New Name: '{}'", createdEvent.getId(), createdEvent.getName());
+        return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
     }
 
     @PostMapping(value = "/event/{eventId}/staff", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Staff> saveStaff(@PathVariable(name = "eventId") long eventId,
-                                           @Valid @RequestBody Staff staff) {
+    public ResponseEntity<Staff> saveStaff(
+            @PathVariable(name = "eventId") final long eventId,
+            @Valid @RequestBody final Staff staff) {
         Event event = eventService.findByEventId(eventId);
         if (event == null) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
         staff.setEvent(event);
+        Staff savedStaff = staffService.save(staff);
         if (staff.getId() <= 0) {
-            return new ResponseEntity<>(staffService.save(staff), HttpStatus.CREATED);
+            LOG.info("Created new staff entry '{}' for event '{}'", savedStaff.getName(), event.getName());
+            return new ResponseEntity<>(savedStaff, HttpStatus.CREATED);
         }
-        return ResponseEntity.ok(staffService.save(staff));
+
+        LOG.info("Updated existing staff entry '{}' for event '{}'", savedStaff.getName(), event.getName());
+        return ResponseEntity.ok(savedStaff);
     }
 
     @GetMapping(value = "/staff/{staffId}")
@@ -170,13 +199,16 @@ public class PrivateAPIController {
         if (staff == null) {
             return new ResponseEntity<>("", HttpStatus.NOT_FOUND);
         }
+
+        LOG.info("Deleted staff entry '{}'", staff.getName());
         staffService.delete(staff);
         return new ResponseEntity<>("", HttpStatus.NO_CONTENT);
     }
 
     @PostMapping(value = "/event/{eventId}/staff/import", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JSONStaffList> importEvent(@PathVariable(name = "eventId") long eventId,
-                                                           @RequestParam("staffFiles") MultipartFile[] staffFiles) throws IOException {
+    public ResponseEntity<JSONStaffList> importEvent(
+            @PathVariable(name = "eventId") final long eventId,
+            @RequestParam("staffFiles") final MultipartFile[] staffFiles) throws IOException {
         Event event = eventService.findByEventId(eventId);
         if (event == null) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
@@ -200,14 +232,15 @@ public class PrivateAPIController {
                 section = section.substring(0, section.length() - 4);
             }
             firstLine = true;
-            dataIndices = new int[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+            dataIndices = new int[]{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(staffFile.getInputStream()))) {
                 while ((line = reader.readLine()) != null) {
                     lineIndex = line.indexOf("\"");
-                    while(lineIndex >= 0) {
+                    while (lineIndex >= 0) {
                         lastLineIndex = line.indexOf("\"", lineIndex + 1);
                         if (lastLineIndex > lineIndex) {
-                            line = line.substring(0, lineIndex) + line.substring(lineIndex + 1, lastLineIndex).replaceAll(";", ",") + line.substring(lastLineIndex + 1);
+                            line = line.substring(0, lineIndex) + line.substring(lineIndex + 1, lastLineIndex).replaceAll(";", ",") + line.substring(
+                                    lastLineIndex + 1);
                         }
                         lineIndex = line.indexOf("\"");
                     }
@@ -302,6 +335,8 @@ public class PrivateAPIController {
                 }
             }
         }
+
+        LOG.info("Imported {} staff data sets from file.", staff.size());
         return new ResponseEntity<>(new JSONStaffList(staff), created >= updated ? HttpStatus.CREATED : HttpStatus.OK);
     }
 
