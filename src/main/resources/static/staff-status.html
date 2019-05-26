@@ -156,6 +156,8 @@
                     "<td id='status-" + value["id"] + "-section' class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-comment' class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
                     "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                    (value["phone"] != null && value["phone"] != "" ? "<a href='tel:" + value["phone"] + "' class='btn btn-light btn-sm' title='MitarbeiterIn anrufen'><i class='fas fa-phone-square fa-fw'></i></a>&nbsp;" : "") +
+                    (value["email"] != null && value["email"] != "" ? "<a href='mailto:" + value["email"] + "' class='btn btn-light btn-sm' title='MitarbeiterIn eine E-Mail senden'><i class='fas fa-envelope fa-fw'></i></a>&nbsp;" : "") +
                     "<span id='status-" + value["id"] + "-div'></span></td></tr>");
                 addStatusChangeButtons(value);
             });
