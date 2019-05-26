@@ -98,16 +98,20 @@
         $("#status-" + staffData["id"]).addClass("table-" + getStatusColor(staffData["status"]));
         switch(staffData["status"]) {
             case "NOT_REGISTERED":
-                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("REGISTERED") + " btn-sm' title='Registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED\")'><i class='fas fa-sign-in-alt fa-fw'></i></button>" +
-                    "&nbsp;<button class='btn btn-" + getStatusColor("REGISTERED_WITH_MATERIAL") + " btn-sm' title='Mit Materialausgabe registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED_WITH_MATERIAL\")'><i class='fas fa-box fa-fw'></i></button>");
+                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("REGISTERED") + "' title='Registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED\")'><i class='fas fa-sign-in-alt fa-fw'></i></button>" +
+                    "&nbsp;<button class='btn btn-" + getStatusColor("REGISTERED_WITH_MATERIAL") + "' title='Mit Materialausgabe registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED_WITH_MATERIAL\")'><i class='fas fa-box fa-fw'></i></button>");
                 break;
             case "REGISTERED":
-            case "REGISTERED_WITH_MATERIAL":
                 $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("NOT_REGISTERED"));
-                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("DEREGISTERED") + " btn-sm' title='Abmelden' onclick='changeStaffStatus(" + staffData["id"] + ", \"DEREGISTERED\")'><i class='fas fa-sign-out-alt fa-fw'></i></button>");
+                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("REGISTERED_WITH_MATERIAL") + "' title='Mit Materialausgabe registrieren' onclick='changeStaffStatus(" + staffData["id"] + ", \"REGISTERED_WITH_MATERIAL\")'><i class='fas fa-box fa-fw'></i></button>" +
+                    "&nbsp;<button class='btn btn-" + getStatusColor("DEREGISTERED") + "' title='Abmelden' onclick='changeStaffStatus(" + staffData["id"] + ", \"DEREGISTERED\")'><i class='fas fa-sign-out-alt fa-fw'></i></button>");
+                break;
+            case "REGISTERED_WITH_MATERIAL":
+                $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("NOT_REGISTERED") + " table-" + getStatusColor("REGISTERED"));
+                $("#status-" + staffData["id"] + "-div").html("<button class='btn btn-" + getStatusColor("DEREGISTERED") + "' title='Abmelden' onclick='changeStaffStatus(" + staffData["id"] + ", \"DEREGISTERED\")'><i class='fas fa-sign-out-alt fa-fw'></i></button>");
                 break;
             default:
-                $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("REGISTERED"), "table-" + getStatusColor("REGISTERED_WITH_MATERIAL"));
+                $("#status-" + staffData["id"]).removeClass("table-" + getStatusColor("REGISTERED") + " table-" + getStatusColor("REGISTERED_WITH_MATERIAL"));
                 $("#status-" + staffData["id"] + "-div").html("");
                 break;
         }
@@ -115,11 +119,12 @@
     function changeStaffStatus(staffId, status) {
         setStatus(staffId, status, function(result) {
             $("#status-" + result["id"] + "-name").html(result["name"]);
-            $("#status-" + result["id"] + "-status").html(getStatusString(result["status"]));
+            $("#status-" + result["id"] + "-status").attr("data-order", getStatusOrder(result["status"])).html(getStatusString(result["status"]));
             $("#status-" + result["id"] + "-external-id").html(result["externalId"] == null ? "" : result["externalId"]);
             $("#status-" + result["id"] + "-section").html(result["section"] == null ? "" : result["section"]);
             $("#status-" + result["id"] + "-comment").html(result["comment"] == null ? "" : result["comment"]);
             addStatusChangeButtons(result);
+            statusTable.row("#status-" + result["id"]).invalidate().draw();
         }, function() {
             $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Der Mitarbeiterstatus konnte nicht ge&auml;ndert werden!</div>");
             $("#error-alert").fadeTo(5000, 0.0, function() {
@@ -151,13 +156,13 @@
                     }
                 }
                 $("#table-status").find("tbody").append("<tr id='status-" + value["id"] + "'><td id='status-" + value["id"] + "-name' class='align-middle'>" + value["name"] + "</td>" +
-                    "<td id='status-" + value["id"] + "-status' class='align-middle'>" + getStatusString(value["status"]) + "</td>" +
+                    "<td id='status-" + value["id"] + "-status' class='align-middle text-center' data-order='" + getStatusOrder(value["status"]) + "' onclick='showStatusString($(this).find(\".status-text\"));'>" + getStatusString(value["status"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-external-id' class='align-middle'>" + (value["externalId"] == null ? "" : value["externalId"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-section' class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
                     "<td id='status-" + value["id"] + "-comment' class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
-                    "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
-                    (value["phone"] != null && value["phone"] != "" ? "<a href='tel:" + value["phone"] + "' class='btn btn-light btn-sm' title='MitarbeiterIn anrufen'><i class='fas fa-phone-square fa-fw'></i></a>&nbsp;" : "") +
-                    (value["email"] != null && value["email"] != "" ? "<a href='mailto:" + value["email"] + "' class='btn btn-light btn-sm' title='MitarbeiterIn eine E-Mail senden'><i class='fas fa-envelope fa-fw'></i></a>&nbsp;" : "") +
+                    "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                    (value["phone"] != null && value["phone"] != "" ? "<a href='tel:" + value["phone"] + "' class='btn btn-light' title='MitarbeiterIn anrufen'><i class='fas fa-phone-square fa-fw'></i></a>&nbsp;" : "") +
+                    (value["email"] != null && value["email"] != "" ? "<a href='mailto:" + value["email"] + "' class='btn btn-light' title='MitarbeiterIn eine E-Mail senden'><i class='fas fa-envelope fa-fw'></i></a>&nbsp;" : "") +
                     "<span id='status-" + value["id"] + "-div'></span></td></tr>");
                 addStatusChangeButtons(value);
             });

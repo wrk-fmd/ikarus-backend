@@ -93,9 +93,9 @@
                 $("#table-events").find("tbody").append("<tr id='event-" + value["id"] + "'><td class='align-middle'>" + (value["externalId"] != null && value["externalId"].length > 0 ? value["externalId"] + " - " : "") + value["name"] + "</td>" +
                     "<td class='align-middle'>" + (value["start"] == null ? "" : new Date(value["start"]).toLocaleString([], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })) + "</td>" +
                     "<td class='align-middle'>" + (value["end"] == null ? "" : new Date(value["end"]).toLocaleString([], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })) + "</td>" +
-                    "<td class='align-middle'><a href='edit-event.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
-                    "<button class='btn btn-danger btn-sm' data-toggle='modal' data-target='#delete-event' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button>&nbsp;" +
-                    "<a href='staff-status.html' class='btn btn-success btn-sm' title='Mitarbeiterstatus verwalten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='fas fa-check fa-fw'></i></a></td></tr>");
+                    "<td class='align-middle'><a href='edit-event.html' class='btn btn-info' title='Bearbeiten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                    "<button class='btn btn-danger' data-toggle='modal' data-target='#delete-event' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button>&nbsp;" +
+                    "<a href='staff-status.html' class='btn btn-success' title='Mitarbeiterstatus verwalten' onclick='setCurrentEvent(" + value["id"] + ");'><i class='fas fa-check fa-fw'></i></a></td></tr>");
             });
             createEventTable();
         }, function() {

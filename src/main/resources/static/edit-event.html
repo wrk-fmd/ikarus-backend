@@ -68,7 +68,7 @@
         </div>
         <div class="text-center">
             <button type="submit" id="edit-event-submit" class="btn btn-primary col-sm-3">Ambulanz hinzuf&uuml;gen</button>
-            <a class="btn btn-success col-sm-3" href="staff-status.html">Mitarbeiterstatus verwalten</a>
+            <a id="manage-staff-status" class="btn btn-success col-sm-3 d-none" href="staff-status.html">Mitarbeiterstatus verwalten</a>
             <a class="btn btn-secondary col-sm-3" href="index.html">Zur&uuml;ck zur Ambulanzliste</a>
         </div>
     </form>
@@ -117,6 +117,7 @@
     var staffTable = null;
     $(document).ready(function() {
         if (getCurrentEvent() > 0) {
+            $("#manage-staff-status").removeClass("d-none");
             getEventInfo(getCurrentEvent(), fillForm, function() {
                 $(".container").prepend("<div id='error-alert' class='alert alert-danger alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die Ambulanzdaten konnten nicht abgerufen werden!</div>");
                 $("#error-alert").fadeTo(5000, 0.0, function() {
@@ -129,6 +130,7 @@
             updateEvent(convertFormToJSON($("#form-edit-event").serializeArray()), function(result) {
                 setCurrentEvent(result["id"]);
                 fillForm(result);
+                $("#manage-staff-status").removeClass("d-none");
                 $(".container").prepend("<div id='success-alert' class='alert alert-success alert-dismissible fade show'><button class='close' data-dismiss='alert'>&times;</button>Die &Auml;nderungen wurden erfolgreich gespeichert!</div>");
                 $("#success-alert").fadeTo(2500, 0.0, function() {
                     $("#success-alert").remove();
@@ -184,12 +186,12 @@
         $("#table-staff").find("tbody").html("");
         $.each(staffData, function(index, value) {
             $("#table-staff").find("tbody").append("<tr id='staff-" + value["id"] + "'><td class='align-middle'>" + value["name"] + "</td>" +
-                "<td class='align-middle'>" + getStatusString(value["status"]) + "</td>" +
+                "<td class='align-middle text-center' data-order='" + getStatusOrder(value["status"]) + "' onclick='showStatusString($(this).find(\".status-text\"));'>" + getStatusString(value["status"]) + "</td>" +
                 "<td class='align-middle'>" + (value["externalId"] == null ? "" : value["externalId"]) + "</td>" +
                 "<td class='align-middle'>" + (value["section"] == null ? "" : value["section"]) + "</td>" +
                 "<td class='align-middle'>" + (value["comment"] == null ? "" : value["comment"]) + "</td>" +
-                "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info btn-sm' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
-                "<button class='btn btn-danger btn-sm' data-toggle='modal' data-target='#delete-staff' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button></td></tr>");
+                "<td class='align-middle'><a href='edit-staff.html' class='btn btn-info' title='Bearbeiten' onclick='setCurrentStaff(" + value["id"] + ");'><i class='far fa-edit fa-fw'></i></a>&nbsp;" +
+                "<button class='btn btn-danger' data-toggle='modal' data-target='#delete-staff' title='L&ouml;schen' onclick='setDeleteInfo(" + value["id"] + ");'><i class='far fa-trash-alt fa-fw'></i></button></td></tr>");
         });
         createStaffTable();
     }
