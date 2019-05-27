@@ -321,6 +321,7 @@ public class PrivateAPIController {
                             Staff savedStaff = staffService.findByEventAndExternalId(event, currentStaff.getExternalId());
                             if (savedStaff != null) {
                                 currentStaff.setId(savedStaff.getId());
+                                currentStaff.setStatus(savedStaff.getStatus());
                                 updated++;
                             } else {
                                 created++;
